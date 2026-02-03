@@ -1,2 +1,2 @@
 # tmux-hive
-A modern tmux session manager with YAML configuration
+*A modern tmux session manager with YAML configuration*
