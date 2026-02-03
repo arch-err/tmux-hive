@@ -60,7 +60,7 @@ func runLaunch(cmd *cobra.Command, args []string) error {
 	}
 
 	logger.Infof("✓ Session '%s' launched successfully", cfg.Session.Name)
-	logger.Info("Attach to the session with: tmux attach -t %s", cfg.Session.Name)
+	logger.Infof("Attach to the session with: tmux attach -t %s", cfg.Session.Name)
 
 	return nil
 }

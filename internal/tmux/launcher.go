@@ -31,15 +31,28 @@ func Launch(cfg *config.Config) error {
 		baseDir = "."
 	}
 
+	// Track first window index for later selection
+	var firstWindowIndex string
+
 	// Create windows and panes
 	for i, window := range cfg.Windows {
 		windowDir := resolveDir(baseDir, window.Dir)
 
 		var windowIndex string
 		if i == 0 {
-			// First window is automatically created, just rename it
-			windowIndex = "0"
-			if err := renameWindow(cfg.Session.Name, "0", window.Name); err != nil {
+			// First window is automatically created, get its index
+			windows, err := ListWindows(cfg.Session.Name)
+			if err != nil {
+				return fmt.Errorf("failed to list windows: %w", err)
+			}
+			if len(windows) == 0 {
+				return fmt.Errorf("no windows found in session")
+			}
+			windowIndex = windows[0].Index
+			firstWindowIndex = windowIndex
+
+			// Rename the first window
+			if err := renameWindow(cfg.Session.Name, windowIndex, window.Name); err != nil {
 				return fmt.Errorf("failed to rename first window: %w", err)
 			}
 		} else {
@@ -111,8 +124,8 @@ func Launch(cfg *config.Config) error {
 	}
 
 	// Select first window
-	if len(cfg.Windows) > 0 {
-		if err := selectWindow(cfg.Session.Name, "0"); err != nil {
+	if len(cfg.Windows) > 0 && firstWindowIndex != "" {
+		if err := selectWindow(cfg.Session.Name, firstWindowIndex); err != nil {
 			return fmt.Errorf("failed to select first window: %w", err)
 		}
 	}
