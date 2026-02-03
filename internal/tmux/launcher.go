@@ -57,10 +57,11 @@ func Launch(cfg *config.Config) error {
 			}
 		} else {
 			// Create additional windows
-			if _, err := CreateWindow(cfg.Session.Name, window.Name, windowDir, window.Layout); err != nil {
+			var err error
+			windowIndex, err = CreateWindow(cfg.Session.Name, window.Name, windowDir, window.Layout)
+			if err != nil {
 				return fmt.Errorf("failed to create window '%s': %w", window.Name, err)
 			}
-			windowIndex = fmt.Sprintf("%d", i)
 		}
 
 		// Create panes

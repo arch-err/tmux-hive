@@ -7,7 +7,7 @@ import (
 )
 
 // CreateWindow creates a new window in the specified session
-func CreateWindow(sessionName, windowName, dir, layout string) (int, error) {
+func CreateWindow(sessionName, windowName, dir, layout string) (string, error) {
 	args := []string{"new-window", "-t", sessionName, "-n", windowName, "-P", "-F", "#{window_index}"}
 
 	if dir != "" {
@@ -17,7 +17,7 @@ func CreateWindow(sessionName, windowName, dir, layout string) (int, error) {
 	cmd := exec.Command("tmux", args...)
 	output, err := cmd.Output()
 	if err != nil {
-		return -1, fmt.Errorf("failed to create window: %w", err)
+		return "", fmt.Errorf("failed to create window: %w", err)
 	}
 
 	windowIndex := strings.TrimSpace(string(output))
@@ -25,11 +25,11 @@ func CreateWindow(sessionName, windowName, dir, layout string) (int, error) {
 	// Set layout if specified
 	if layout != "" {
 		if err := SetWindowLayout(sessionName, windowIndex, layout); err != nil {
-			return -1, err
+			return "", err
 		}
 	}
 
-	return 0, nil
+	return windowIndex, nil
 }
 
 // SetWindowLayout sets the layout for a window
