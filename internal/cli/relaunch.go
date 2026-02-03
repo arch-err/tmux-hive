@@ -1,29 +1,31 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/arch-err/tmux-hive/internal/config"
 	"github.com/arch-err/tmux-hive/internal/tmux"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
-var launchCmd = &cobra.Command{
-	Use:   "launch",
-	Short: "Launch a tmux session from a hive configuration",
-	Long: `Launch a tmux session from a hive configuration file.
+var relaunchCmd = &cobra.Command{
+	Use:   "relaunch",
+	Short: "Kill and relaunch the tmux session",
+	Long: `Kill the existing tmux session (if it exists) and relaunch it from the config.
 
-Creates a new tmux session with windows and panes as defined in the config.
-If the session already exists, an error will be returned.`,
-	RunE: runLaunch,
+Combines 'hive clear' and 'hive launch' into a single command.
+Asks for confirmation before killing the existing session.`,
+	RunE: runRelaunch,
 }
 
 func init() {
-	rootCmd.AddCommand(launchCmd)
+	rootCmd.AddCommand(relaunchCmd)
 }
 
-func runLaunch(cmd *cobra.Command, args []string) error {
+func runRelaunch(cmd *cobra.Command, args []string) error {
 	// Discover config file
 	configPath, err := config.Discover(cfgFile)
 	if err != nil {
@@ -47,16 +49,41 @@ func runLaunch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if session already exists
+	// Check if session exists
 	if tmux.SessionExists(cfg.Session.Name) {
-		logger.Errorf("Session '%s' already exists", cfg.Session.Name)
-		logger.Info("Kill the session first with: tmux kill-session -t %s", cfg.Session.Name)
-		return err
+		// Ask for confirmation to kill
+		var confirm bool
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewConfirm().
+					Title(fmt.Sprintf("Kill existing session '%s' and relaunch?", cfg.Session.Name)).
+					Description("This will terminate the session and all processes running in it.").
+					Value(&confirm),
+			),
+		)
+
+		if err := form.Run(); err != nil {
+			return fmt.Errorf("confirmation cancelled")
+		}
+
+		if !confirm {
+			logger.Info("Cancelled")
+			return nil
+		}
+
+		// Kill the session
+		logger.Infof("Killing session '%s'", cfg.Session.Name)
+		if err := tmux.KillSession(cfg.Session.Name); err != nil {
+			logger.Error("Failed to kill session")
+			return err
+		}
+
+		logger.Infof("✓ Session '%s' killed", cfg.Session.Name)
 	}
 
+	// Launch the session (same as launch command)
 	logger.Infof("Launching session '%s'", cfg.Session.Name)
 
-	// Launch the session
 	if err := tmux.Launch(cfg); err != nil {
 		logger.Error("Failed to launch session")
 		return err
