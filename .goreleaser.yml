@@ -1,0 +1,88 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: hive
+    binary: hive
+    main: ./cmd/hive
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/arch-err/tmux-hive/internal/cli.Version={{.Version}}
+      - -X github.com/arch-err/tmux-hive/internal/cli.Commit={{.Commit}}
+      - -X github.com/arch-err/tmux-hive/internal/cli.BuildDate={{.Date}}
+
+archives:
+  - id: hive
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'typo'
+  groups:
+    - title: Features
+      regexp: '^feat:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix:'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: arch-err
+    name: tmux-hive
+  draft: false
+  prerelease: auto
+  mode: append
+  header: |
+    ## Hive {{ .Tag }} ({{ .Date }})
+
+    A modern tmux session manager with YAML configuration.
+  footer: |
+    **Full Changelog**: https://github.com/arch-err/tmux-hive/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ## Installation
+
+    ### Download Binary
+    Download the appropriate binary for your platform from the assets below.
+
+    ### Using Go
+    ```bash
+    go install github.com/arch-err/tmux-hive/cmd/hive@{{ .Tag }}
+    ```
