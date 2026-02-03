@@ -91,15 +91,29 @@ func runRelaunch(cmd *cobra.Command, args []string) error {
 
 	logger.Infof("✓ Session '%s' launched successfully", cfg.Session.Name)
 
-	// Attach to the session
-	attachCmd := exec.Command("tmux", "attach", "-t", cfg.Session.Name)
-	attachCmd.Stdin = os.Stdin
-	attachCmd.Stdout = os.Stdout
-	attachCmd.Stderr = os.Stderr
+	// Check if we're already in a tmux session
+	inTmux := os.Getenv("TMUX") != ""
 
-	if err := attachCmd.Run(); err != nil {
-		logger.Warnf("Failed to attach to session (session created successfully): %v", err)
-		logger.Infof("Attach manually with: tmux attach -t %s", cfg.Session.Name)
+	var switchCmd *exec.Cmd
+	if inTmux {
+		// Switch to the new session instead of attaching
+		switchCmd = exec.Command("tmux", "switch-client", "-t", cfg.Session.Name)
+	} else {
+		// Attach to the session
+		switchCmd = exec.Command("tmux", "attach", "-t", cfg.Session.Name)
+	}
+
+	switchCmd.Stdin = os.Stdin
+	switchCmd.Stdout = os.Stdout
+	switchCmd.Stderr = os.Stderr
+
+	if err := switchCmd.Run(); err != nil {
+		logger.Warnf("Failed to attach/switch to session (session created successfully): %v", err)
+		if inTmux {
+			logger.Infof("Switch manually with: tmux switch-client -t %s", cfg.Session.Name)
+		} else {
+			logger.Infof("Attach manually with: tmux attach -t %s", cfg.Session.Name)
+		}
 	}
 
 	return nil
